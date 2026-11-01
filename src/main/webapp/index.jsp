@@ -1,282 +1,177 @@
 <html>
 <head>
-<title>Dil Se - Hindi Romantic Music</title>
+<title>Bike Rider Game</title>
 
 <style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
 body {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg,#18051f,#501044,#a83268);
+    margin: 0;
+    background: #222;
+    font-family: Arial;
+    text-align: center;
     color: white;
-    min-height: 100vh;
 }
 
-header {
-    padding: 25px;
-    text-align: center;
-    font-size: 30px;
-    font-weight: bold;
-    color: #ffb6d5;
+h1 { color: orange; }
+
+#game {
+    width: 400px;
+    height: 550px;
+    background: #555;
+    margin: auto;
+    position: relative;
+    overflow: hidden;
+    border-left: 6px solid white;
+    border-right: 6px solid white;
 }
 
-.container {
-    max-width: 750px;
-    margin: 20px auto;
-    padding: 20px;
+#bike {
+    position: absolute;
+    bottom: 25px;
+    left: 175px;
+    font-size: 45px;
+    z-index: 5;
 }
 
-.player {
-    background: rgba(255,255,255,0.12);
-    padding: 25px;
-    border-radius: 20px;
-    text-align: center;
+.road-line {
+    position: absolute;
+    width: 8px;
+    height: 60px;
+    background: white;
+    left: 196px;
 }
 
-.cover {
-    width: 220px;
-    height: 220px;
-    border-radius: 50%;
-    margin: 15px auto;
-    background: linear-gradient(45deg,#ff416c,#ff8cba);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 85px;
-    box-shadow: 0 0 30px #ff4f9a;
+.obstacle {
+    position: absolute;
+    font-size: 35px;
 }
 
-h2 {
-    margin: 15px;
+#score {
+    font-size: 22px;
+    margin: 10px;
 }
 
-.controls button {
-    background: #ff4081;
-    color: white;
+button {
+    padding: 12px 25px;
+    background: orange;
     border: none;
-    padding: 13px 20px;
-    margin: 10px 5px;
-    border-radius: 30px;
-    cursor: pointer;
-    font-size: 18px;
-}
-
-.controls button:hover {
-    background: #ff80ab;
-}
-
-input[type="range"] {
-    width: 90%;
-    accent-color: #ff4081;
-}
-
-.search {
-    width: 100%;
-    padding: 14px;
-    margin: 20px 0;
-    border-radius: 10px;
-    border: none;
-}
-
-.song {
-    background: rgba(255,255,255,0.12);
-    padding: 16px;
-    margin: 10px 0;
-    border-radius: 10px;
-    cursor: pointer;
-}
-
-.song:hover {
-    background: rgba(255,255,255,0.25);
-}
-
-footer {
-    text-align: center;
-    padding: 25px;
-    color: #ffc0db;
+    border-radius: 8px;
+    font-size: 17px;
+    margin: 8px;
 }
 </style>
 </head>
 
 <body>
 
-<header>❤️ DIL SE MUSIC ❤️</header>
+<h1>🏍 BIKE RIDER GAME</h1>
+<div id="score">Score: 0</div>
 
-<div class="container">
-
-<div class="player">
-
-    <div class="cover">🎵</div>
-
-    <h2 id="title">Select Your Love Song</h2>
-    <p>Hindi Romantic Collection</p>
-
-    <br>
-
-    <audio id="audio"></audio>
-
-    <input type="range" id="progress"
-    value="0" min="0" max="100">
-
-    <div class="controls">
-        <button onclick="previousSong()">⏮</button>
-        <button onclick="togglePlay()" id="playBtn">▶</button>
-        <button onclick="nextSong()">⏭</button>
-    </div>
-
-    <p>Volume</p>
-    <input type="range" min="0" max="1"
-    step="0.01" value="0.7"
-    id="volume">
-
+<div id="game">
+    <div id="bike">🏍️</div>
 </div>
 
-<input type="text" class="search"
-id="search" placeholder="Search romantic songs..."
-oninput="searchSongs()">
-
-<h2>💖 Romantic Songs</h2>
-
-<div id="songList"></div>
-
-</div>
-
-<footer>
-Made with ❤️ for Music Lovers
-</footer>
+<button onclick="move(-1)">⬅ LEFT</button>
+<button onclick="startGame()">START</button>
+<button onclick="move(1)">RIGHT ➡</button>
+<br>
+<button onclick="accelerate()">ACCELERATE</button>
 
 <script>
+const game = document.getElementById("game");
+const bike = document.getElementById("bike");
+const scoreText = document.getElementById("score");
 
-const songs = [
-    {
-        name: "Tum Hi Ho",
-        file: "songs/tum-hi-ho.mp3"
-    },
-    {
-        name: "Raabta",
-        file: "songs/raabta.mp3"
-    },
-    {
-        name: "Kesariya",
-        file: "songs/kesariya.mp3"
-    },
-    {
-        name: "Hawayein",
-        file: "songs/hawayein.mp3"
-    },
-    {
-        name: "Shayad",
-        file: "songs/shayad.mp3"
-    },
-    {
-        name: "Apna Bana Le",
-        file: "songs/apna-bana-le.mp3"
-    },
-    {
-        name: "Tera Ban Jaunga",
-        file: "songs/tera-ban-jaunga.mp3"
-    },
-    {
-        name: "Ranjha",
-        file: "songs/ranjha.mp3"
-    }
-];
+let bikeX = 175;
+let score = 0;
+let speed = 5;
+let running = false;
+let obstacles = [];
+let animation;
+let lastObstacle = 0;
 
-let currentSong = 0;
+function move(direction) {
+    if (!running) return;
 
-const audio = document.getElementById("audio");
-const title = document.getElementById("title");
-const playBtn = document.getElementById("playBtn");
-const progress = document.getElementById("progress");
-
-function loadSong(index) {
-    currentSong = index;
-    audio.src = songs[index].file;
-    title.innerText = songs[index].name;
-    audio.play();
-    playBtn.innerText = "⏸";
+    bikeX += direction * 45;
+    bikeX = Math.max(10, Math.min(345, bikeX));
+    bike.style.left = bikeX + "px";
 }
 
-function togglePlay() {
-    if (!audio.src) {
-        loadSong(currentSong);
-        return;
-    }
-
-    if (audio.paused) {
-        audio.play();
-        playBtn.innerText = "⏸";
-    } else {
-        audio.pause();
-        playBtn.innerText = "▶";
-    }
+function accelerate() {
+    if (running) speed = Math.min(speed + 2, 15);
 }
 
-function nextSong() {
-    currentSong = (currentSong + 1) % songs.length;
-    loadSong(currentSong);
+function startGame() {
+    cancelAnimationFrame(animation);
+    obstacles.forEach(o => o.el.remove());
+    obstacles = [];
+
+    bikeX = 175;
+    score = 0;
+    speed = 5;
+    lastObstacle = 0;
+    running = true;
+
+    bike.style.left = bikeX + "px";
+    gameLoop();
 }
 
-function previousSong() {
-    currentSong =
-        (currentSong - 1 + songs.length) % songs.length;
-    loadSong(currentSong);
+function createObstacle() {
+    let el = document.createElement("div");
+    el.className = "obstacle";
+    el.innerHTML = "🚗";
+
+    let x = [35, 130, 235, 320][Math.floor(Math.random() * 4)];
+
+    el.style.left = x + "px";
+    el.style.top = "-50px";
+
+    game.appendChild(el);
+    obstacles.push({el: el, x: x, y: -50});
 }
 
-audio.addEventListener("timeupdate", () => {
-    if (audio.duration) {
-        progress.value =
-            (audio.currentTime / audio.duration) * 100;
+function gameLoop() {
+    if (!running) return;
+
+    let now = Date.now();
+
+    if (now - lastObstacle > 1100) {
+        createObstacle();
+        lastObstacle = now;
     }
-});
 
-progress.addEventListener("input", () => {
-    if (audio.duration) {
-        audio.currentTime =
-            (progress.value / 100) * audio.duration;
-    }
-});
+    obstacles.forEach((o, index) => {
+        o.y += speed;
+        o.el.style.top = o.y + "px";
 
-document.getElementById("volume").oninput = function() {
-    audio.volume = this.value;
-};
+        // Collision detection
+        if (
+            o.y > 445 &&
+            o.y < 525 &&
+            Math.abs(o.x - bikeX) < 45
+        ) {
+            running = false;
+            alert("GAME OVER! Your Score: " + score);
+        }
 
-audio.addEventListener("ended", nextSong);
-
-function displaySongs(list) {
-    document.getElementById("songList").innerHTML = "";
-
-    list.forEach(song => {
-        let index = songs.indexOf(song);
-
-        let div = document.createElement("div");
-        div.className = "song";
-        div.textContent = "🎵 " + song.name;
-
-        div.onclick = () => loadSong(index);
-
-        document.getElementById("songList")
-            .appendChild(div);
+        if (o.y > 560) {
+            o.el.remove();
+            obstacles.splice(index, 1);
+            score += 10;
+            scoreText.innerHTML = "Score: " + score;
+        }
     });
+
+    if (running) {
+        animation = requestAnimationFrame(gameLoop);
+    }
 }
 
-function searchSongs() {
-    let query = document.getElementById("search")
-        .value.toLowerCase();
-
-    let filtered = songs.filter(song =>
-        song.name.toLowerCase().includes(query)
-    );
-
-    displaySongs(filtered);
-}
-
-displaySongs(songs);
-
+document.addEventListener("keydown", function(e) {
+    if (e.key === "ArrowLeft") move(-1);
+    if (e.key === "ArrowRight") move(1);
+    if (e.key === "ArrowUp") accelerate();
+});
 </script>
 
 </body>
